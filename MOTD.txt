@@ -1,0 +1,7 @@
+IIIIIIII  RRRRRRRR    CCCCCCC  
+    I     R      R   C       
+    I     R      R   C       
+    I     RRRRRRRR   C       
+    I     R   R      C       
+    I     R    R     C       
+IIIIIIII  R     R     CCCCCCC 
