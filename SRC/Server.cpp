@@ -1,40 +1,13 @@
-/**
- * @file Server.cpp
- * @brief Implementation of the IRC Server core functionality
- * 
- * This file contains the implementation of the IRC server's core functionality,
- * including connection handling, message processing, and client management.
- * The server is implemented using the Singleton pattern to ensure only one instance exists.
- */
-
 #include "../Includes/Server.hpp"
 
 bool signalInterrupt = false;
 
-/**
- * @brief Get the singleton instance of the Server
- * @return Server* Pointer to the server instance
- * 
- * Implements the Singleton pattern to ensure only one server instance exists
- * throughout the application's lifecycle.
- */
 Server* Server::getInstance(void) {
     if (!Server::_instance)
         Server::_instance = new Server();
     return Server::_instance;
 }
 
-/**
- * @brief Initialize the IRC server
- * @throws IrcException if server initialization fails
- * 
- * Sets up the server socket with:
- * - Non-blocking I/O
- * - TCP/IP configuration
- * - Address reuse
- * - Binding to specified port
- * - Listen queue initialization
- */
 void Server::initServer(void) {
     _listeningSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (_listeningSocket == -1) {
@@ -83,12 +56,6 @@ void Server::initServer(void) {
     return;
 }
 
-/**
- * @brief Signal handler for interrupt signals
- * @param signal The signal received
- * 
- * Handles interrupt signals (SIGTSTP, SIGINT, SIGQUIT) by setting the signalInterrupt flag.
- */
 void Server::signalHandler(int signal) {
     std::cerr << "Interrupt Signal (" << signal << ") received, Shutting down the Server..." << std::endl;
     signalInterrupt = true;
@@ -96,16 +63,6 @@ void Server::signalHandler(int signal) {
     return;
 }
 
-/**
- * @brief Main server loop
- * 
- * Implements the core server event loop using poll() for I/O multiplexing:
- * 1. Monitors all client sockets for activity
- * 2. Accepts new connections
- * 3. Handles client messages
- * 4. Manages client disconnections
- * 5. Processes server replies
- */
 void Server::runServer(void) {
     signal(SIGTSTP, signalHandler);
     signal(SIGINT, signalHandler);
@@ -146,13 +103,6 @@ void Server::runServer(void) {
     return;
 }
 
-/**
- * @brief Send queued messages to a client
- * @param client_fd The client's file descriptor
- * 
- * Processes and sends all queued messages (serverReplies) for a specific client.
- * Messages are removed from the queue after successful transmission.
- */
 void Server::sendToClient(int client_fd) {
     Client* client = _clients[client_fd];
     std::vector<std::string>::iterator it = client->serverReplies.begin();
@@ -172,15 +122,6 @@ void Server::sendToClient(int client_fd) {
     return;
 }
 
-/**
- * @brief Handle new client connections
- * 
- * Accepts new client connections and:
- * 1. Sets up non-blocking I/O
- * 2. Creates a new Client object
- * 3. Initializes client state
- * 4. Adds client to the server's client list
- */
 void Server::handleNewConnection(void) {
     sockaddr_in clientHint;
     socklen_t clientSize = sizeof(clientHint);
@@ -211,16 +152,6 @@ void Server::handleNewConnection(void) {
     return;
 }
 
-/**
- * @brief Receive data from a client
- * @param fd The client's file descriptor
- * @return int Number of bytes received or error code
- * 
- * Handles raw data reception from clients, managing:
- * - Partial receives
- * - Connection errors
- * - Buffer management
- */
 int Server::ft_recv(int fd) {
     _message.clear();
     _message.resize(BUFFER_SIZE);
@@ -234,16 +165,6 @@ int Server::ft_recv(int fd) {
     return bytesRecv;
 }
 
-/**
- * @brief Handle client disconnection
- * @param client_fd The client's file descriptor
- * @param bytesRecv Number of bytes received (used to determine disconnection type)
- * 
- * Manages client disconnection:
- * 1. Notifies other clients/channels
- * 2. Cleans up client resources
- * 3. Updates server state
- */
 void Server::handleClientDisconnection(int client_fd, int bytesRecv) {
     if (bytesRecv == 0) {
         std::cout << "Client " << client_fd << " disconnected" << std::endl;
@@ -260,16 +181,6 @@ void Server::handleClientDisconnection(int client_fd, int bytesRecv) {
     return;
 }
 
-/**
- * @brief Process received client messages
- * @param client_fd The client's file descriptor
- * 
- * Handles IRC protocol messages:
- * 1. Parses raw messages
- * 2. Validates message format
- * 3. Routes to appropriate command handlers
- * 4. Manages command responses
- */
 void Server::handleClientMessage(int client_fd) {
     int bytesRecv = ft_recv(client_fd);
 
@@ -278,22 +189,17 @@ void Server::handleClientMessage(int client_fd) {
         return;
     }
 
-    // Append new data to client's buffer
     _clients[client_fd]->appendToBuffer(_message);
     
     std::string& buffer = _clients[client_fd]->getBuffer();
     std::vector<std::string> commandList;
     size_t pos;
 
-    // Find complete commands (ending with \n or \r\n)
     while ((pos = buffer.find('\n')) != std::string::npos) {
-        // Extract the complete command (including the \n)
         std::string completeCommand = buffer.substr(0, pos + 1);
         
-        // Remove the processed command from buffer
         buffer.erase(0, pos + 1);
         
-        // Process the complete command
         std::cout << "Received complete command from client " << _clients[client_fd]->getNickname() 
                  << ": " << completeCommand;
         
@@ -304,16 +210,6 @@ void Server::handleClientMessage(int client_fd) {
     return;
 }
 
-/**
- * @brief Close a client connection
- * @param client_fd The client's file descriptor
- * 
- * Performs clean client disconnection:
- * 1. Closes socket
- * 2. Removes from channels
- * 3. Cleans up resources
- * 4. Updates server state
- */
 void Server::closeClient(int client_fd) {
     std::map<int, Client*>::iterator it = _clients.find(client_fd);
     if (it != _clients.end()) {
@@ -331,23 +227,10 @@ void Server::closeClient(int client_fd) {
     }
 }
 
-/**
- * @brief Get the server password
- * @return std::string The server password
- */
 std::string Server::getServerPassword(void) {
     return _serverPassword;
 }
 
-/**
- * @brief Clean up server resources
- * 
- * Performs server shutdown and cleanup:
- * 1. Closes all client sockets
- * 2. Removes all clients from channels
- * 3. Cleans up server resources
- * 4. Exits the application
- */
 void Server::cleanupServer(void) {
     std::cout << "Cleaning up server..." << std::endl;
     for (std::vector<pollfd>::iterator it = _fds.begin(); it != _fds.end(); ++it)

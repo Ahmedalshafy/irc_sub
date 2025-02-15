@@ -1,20 +1,5 @@
-/**
- * @file ParseMessage.cpp
- * @brief IRC Message Parser Implementation
- * 
- * This file implements the parsing of IRC protocol messages according to RFC 2812.
- * It handles message format: [:<prefix>] <command> [<parameters>...] [:<trailing>]
- */
-
 #include "../Includes/Server.hpp"
 
-/**
- * @brief Trim whitespace from both ends of a string
- * @param str String to trim
- * @return Trimmed string
- * 
- * Removes leading and trailing whitespace (space, newline, carriage return, tab)
- */
 std::string ParseMessage::ft_trim(const std::string &str) const {
     std::size_t start = str.find_first_not_of(" \n\r\t");
     std::size_t end = str.find_last_not_of(" \n\r\t");
@@ -26,15 +11,6 @@ std::string ParseMessage::ft_trim(const std::string &str) const {
     return str.substr(start, end - start + 1);
 }
 
-/**
- * @brief Split a string by delimiter
- * @param str String to split
- * @param delimiter Character to split on
- * @return Vector of substrings
- * 
- * Splits a string into parts based on a delimiter character,
- * ignoring empty parts between consecutive delimiters
- */
 std::vector<std::string> ft_split(std::string str, char delimiter)
 {
     std::vector<std::string> result;
@@ -62,16 +38,6 @@ std::vector<std::string> ft_split(std::string str, char delimiter)
     return result;
 }
 
-/**
- * @brief Process and split a string by spaces, handling IRC message format
- * @param str Input string to process
- * @return Vector of space-separated components
- * 
- * Special handling for IRC message format:
- * - Preserves content after ':' as a single parameter
- * - Handles multiple consecutive spaces
- * - Removes carriage return and newline
- */
 std::vector<std::string> remove_spaces(std::string &str)
 {
     std::vector<std::string> result;
@@ -99,21 +65,6 @@ std::vector<std::string> remove_spaces(std::string &str)
     return result;
 }
 
-/**
- * @brief Parse an IRC protocol message
- * @param message Raw message to parse
- * 
- * Parses an IRC message into its components:
- * 1. Prefix (if exists, starts with ':')
- * 2. Command (required)
- * 3. Parameters (optional)
- * 4. Trailing parameter (after ':', optional)
- * 
- * Example formats:
- * - "PRIVMSG #channel :Hello world"
- * - ":nick!user@host PRIVMSG #channel :Hello"
- * - "JOIN #channel"
- */
 ParseMessage::ParseMessage(const std::string& message)
 {
     if (message.empty()) {
@@ -178,16 +129,6 @@ ParseMessage::ParseMessage(const std::string& message)
     return;
 }
 
-/**
- * @brief Validate a parameter string
- * @param param Parameter to validate
- * @return true if valid, false otherwise
- * 
- * Checks if a parameter:
- * - Is not empty
- * - Contains valid characters
- * - Follows IRC parameter rules
- */
 bool ParseMessage::isValid(const std::string &param) const {
     std::string invalidChars = "\n\r\t:";
     std::size_t valid = param.find_first_of(invalidChars); 
@@ -195,13 +136,6 @@ bool ParseMessage::isValid(const std::string &param) const {
     return valid == std::string::npos;
 }
 
-/**
- * @brief Check if a string is alphanumeric
- * @param str String to check
- * @return true if string is alphanumeric, false otherwise
- * 
- * Used for validating nicknames, channel names, and other identifiers
- */
 bool Server::isAlphanumeric(const std::string &str) {
     for (std::string::const_iterator it = str.begin(); it != str.end(); ++it) {
         if (!std::isalnum(static_cast<unsigned char>(*it))) {

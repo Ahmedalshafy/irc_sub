@@ -1,43 +1,15 @@
-/**
- * @file modeCommand.cpp
- * @brief Implementation of IRC MODE command
- * 
- * This file implements the MODE command which allows changing channel and user modes.
- * It supports various channel modes according to RFC 2812:
- * - i: Invite-only channel
- * - t: Protected topic
- * - k: Channel key (password)
- * - o: Channel operator
- * - l: User limit
- */
-
 #include "../Includes/Server.hpp"
 
-/**
- * @brief Handle channel key mode (+k/-k)
- * @param client Client requesting the mode change
- * @param channel Target channel
- * @param isAdding True if adding mode, false if removing
- * @param params Command parameters
- * @param paramIndex Current parameter index
- * @return True if mode was changed successfully
- * 
- * Handles setting and removing channel keys (passwords)
- * - +k <key>: Set channel key
- * - -k: Remove channel key
- */
 bool Server::handleKeyMode(Client *client, Channel &channel, bool isAdding,
       std::vector<std::string> &params, std::size_t &paramIndex)
 {
     std::map<char, bool> modesMap = channel.getModesMap();
     std::map<char, bool>::iterator itr = modesMap.find('k');
     
-    // Check if mode is already in desired state
     if (isAdding == itr->second) {
         return (false);
     }
 
-    // Adding key mode
     if (isAdding && paramIndex < params.size()) {
         if(isAlphanumeric(params[paramIndex])) {
             channel.setKey(params[paramIndex++]);
@@ -62,23 +34,9 @@ bool Server::handleKeyMode(Client *client, Channel &channel, bool isAdding,
         channel.removeKey();
         return(true);
     }
-
     return (false);
 }
 
-/**
- * @brief Handle channel user limit mode (+l/-l)
- * @param client Client requesting the mode change
- * @param channel Target channel
- * @param isAdding True if adding mode, false if removing
- * @param params Command parameters
- * @param paramIndex Current parameter index
- * @return True if mode was changed successfully
- * 
- * Handles setting and removing channel user limits
- * - +l <limit>: Set user limit
- * - -l: Remove user limit
- */
 bool Server::handleLimitMode(Client *client, Channel &channel, bool isAdding,
       std::vector<std::string> &params, std::size_t &paramIndex)
 {
@@ -90,7 +48,6 @@ bool Server::handleLimitMode(Client *client, Channel &channel, bool isAdding,
         return (false);
     }
 
-    // Adding limit mode
     if (isAdding && paramIndex < params.size()) {
         UserLimit = std::atoi(params[paramIndex++].c_str());
         if (UserLimit > 0) {
@@ -119,31 +76,16 @@ bool Server::handleLimitMode(Client *client, Channel &channel, bool isAdding,
     return (false);
 }
 
-/**
- * @brief Handle channel operator mode (+o/-o)
- * @param client Client requesting the mode change
- * @param channel Target channel
- * @param isAdding True if adding mode, false if removing
- * @param params Command parameters
- * @param paramIndex Current parameter index
- * @return True if mode was changed successfully
- * 
- * Handles setting and removing channel operator status
- * - +o <nickname>: Grant operator status
- * - -o <nickname>: Remove operator status
- */
 bool Server::handleOperatorMode(Client *client, Channel &channel, bool isAdding,
       std::vector<std::string> &params, std::size_t &paramIndex)
 {
     std::map<char, bool> modesMap = channel.getModesMap();
     std::map<char, bool>::iterator itr = modesMap.find('o');
     
-    // Check if mode is already in desired state
     if (isAdding == itr->second) {
         return (false);
     }
 
-    // Adding operator mode
     if (paramIndex < params.size())
     {
         std::string targetNick = params[paramIndex++];
@@ -166,18 +108,6 @@ bool Server::handleOperatorMode(Client *client, Channel &channel, bool isAdding,
     return (false);
 }
 
-/**
- * @brief Process a single channel mode change
- * @param client Client requesting the mode change
- * @param channel Target channel
- * @param mode Mode character to process
- * @param isAdding True if adding mode, false if removing
- * @param params Command parameters
- * @param paramIndex Current parameter index
- * @return True if mode was changed successfully
- * 
- * Handles individual mode changes by delegating to specific handlers
- */
 bool Server::processSingleChannelMode(Client *client, Channel &channel,
     char mode, bool isAdding, std::vector<std::string> &params,
     std::size_t &paramIndex)
@@ -204,15 +134,6 @@ bool Server::processSingleChannelMode(Client *client, Channel &channel,
     }
 }
 
-/**
- * @brief Process multiple channel modes
- * @param client Client requesting the mode changes
- * @param channel Target channel
- * @param params Command parameters
- * 
- * Processes a mode string that may contain multiple mode changes
- * Example: MODE #channel +k-l key
- */
 void Server::processChannelModes(Client *client, Channel &channel,
       std::vector<std::string> &params)
 {
@@ -245,15 +166,6 @@ void Server::processChannelModes(Client *client, Channel &channel,
     }
 }
 
-/**
- * @brief Handle channel mode changes
- * @param client Client requesting the mode changes
- * @param channelName Target channel name
- * @param params Command parameters
- * 
- * Main handler for channel mode changes, validates permissions
- * and delegates to mode processors
- */
 void Server::handleChannelMode(Client *client, std::string &channelName,
       std::vector<std::string> &params)
 {
@@ -282,22 +194,6 @@ void Server::handleChannelMode(Client *client, std::string &channelName,
     }
 }
 
-/**
- * @brief Main MODE command handler
- * @param client Client issuing the MODE command
- * @param parsedMsg Parsed message containing command parameters
- * 
- * Command format: MODE <target> [<modestring> [<mode arguments>...]]
- * 
- * Handles both channel and user modes:
- * 1. Channel modes:
- *    - i: Invite-only
- *    - t: Protected topic
- *    - k: Channel key
- *    - o: Channel operator
- *    - l: User limit
- * 2. User modes (not implemented in this version)
- */
 void Server::handelModeCommand(Client *client, const ParseMessage &parsedMsg)
 {
     std::vector<std::string> params = parsedMsg.getParams();
